@@ -31,7 +31,7 @@
 ## 构建
 
 ```powershell
-dotnet publish src/WiFiFix/WiFiFix.csproj -c Release -r win-x64 --self-contained true -p:TelemetryTest=false -o build/v2.4-release
+dotnet publish src/ReWiFi/ReWiFi.csproj -c Release -r win-x64 --self-contained true -p:TelemetryTest=false -o build/v2.4-release
 ```
 
-参考 [精简计划与验收](精简计划与验收.md)、[更新日志](更新日志.md)、[遥测说明](遥测接入与隐私说明.md)。
+参考 [项目目录与文档索引](项目目录与文档索引.md)、[精简计划与验收](精简计划与验收.md)、[更新日志](更新日志.md)、[遥测说明](遥测接入与隐私说明.md)。

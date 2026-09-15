@@ -79,9 +79,9 @@
     <p>不支持安卓手机、iPhone、macOS、Linux 等非 Windows 设备。移动 EXE 不会携带原电脑的配置；换到新电脑后，需要重新设置目标 Wi‑Fi 和网卡名称，开机启动任务也需要在新电脑重新创建。</p>
 
     <h2>编译</h2>
-    <pre><code>dotnet build .\XAOCEN-WiFiFix.sln -c Release
+    <pre><code>dotnet build .\XAOCEN-ReWiFi.sln -c Release
 
-dotnet publish .\src\WiFiFix\WiFiFix.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o .\build\v2.4-release</code></pre>
+dotnet publish .\src\ReWiFi\ReWiFi.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o .\build\v2.4-release</code></pre>
     <p>输出文件名为 <code>XAOCEN-ReWiFi.exe</code>。自包含便携版本，目标电脑不需要另外安装 .NET 10。</p>
 
     <h2>使用与协议</h2><p>用户协议和隐私说明可从程序托盘菜单或设置页面查看。在线入口由客户端根据网络状态打开官网版本或内置副本。</p>

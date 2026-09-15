@@ -27,6 +27,6 @@ archive/
 assets/XAOCEN-ReWiFi-banner*.png
 assets/图层 2.png
 assets/Codex 图像 *.png
-src/WiFiFix/Assets/wifi-icon*.png
-src/WiFiFix/Assets/wifi-icon.ico
-src/WiFiFix/Assets/XAOCEN-ReWiFi-banner*.png
+src/ReWiFi/Assets/wifi-icon*.png
+src/ReWiFi/Assets/wifi-icon.ico
+src/ReWiFi/Assets/XAOCEN-ReWiFi-banner*.png

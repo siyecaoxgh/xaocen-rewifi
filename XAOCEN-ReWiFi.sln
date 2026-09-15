@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WiFiFix", "src\WiFiFix\WiFiFix.csproj", "{A4C5B9A6-37C8-4D1A-A1CE-7B0B9D93E6D2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReWiFi", "src\ReWiFi\ReWiFi.csproj", "{A4C5B9A6-37C8-4D1A-A1CE-7B0B9D93E6D2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
