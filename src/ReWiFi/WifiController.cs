@@ -10,6 +10,7 @@ namespace XAOCEN.ReWiFi;
 public sealed class WifiController
 {
     private static readonly Encoding NetshEncoding = CreateNetshEncoding();
+    private static readonly Encoding StrictUtf8Encoding = new UTF8Encoding(false, true);
 
     public async Task<WifiConnectionInfo?> DetectCurrentWifiAsync(CancellationToken cancellationToken = default)
     {
@@ -156,9 +157,7 @@ public sealed class WifiController
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                StandardOutputEncoding = NetshEncoding,
-                StandardErrorEncoding = NetshEncoding
+                RedirectStandardError = true
             }
         };
 
@@ -174,8 +173,8 @@ public sealed class WifiController
                 return new CommandResult(false, string.Empty, "无法启动 netsh.exe");
             }
 
-            var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            var outputTask = ReadNetshOutputAsync(process.StandardOutput.BaseStream, cancellationToken);
+            var errorTask = ReadNetshOutputAsync(process.StandardError.BaseStream, cancellationToken);
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             var output = await outputTask.ConfigureAwait(false);
             var error = await errorTask.ConfigureAwait(false);
@@ -292,6 +291,32 @@ public sealed class WifiController
         catch
         {
             return Encoding.Default;
+        }
+    }
+
+    private static async Task<string> ReadNetshOutputAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+        var bytes = buffer.ToArray();
+        if (bytes.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var offset = bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble)
+            ? Encoding.UTF8.Preamble.Length
+            : 0;
+
+        try
+        {
+            // Newer Windows configurations can emit redirected netsh output as UTF-8
+            // even when the current culture still reports an OEM code page such as 936.
+            return StrictUtf8Encoding.GetString(bytes, offset, bytes.Length - offset);
+        }
+        catch (DecoderFallbackException)
+        {
+            return NetshEncoding.GetString(bytes);
         }
     }
 

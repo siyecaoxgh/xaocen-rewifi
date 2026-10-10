@@ -5,7 +5,9 @@ namespace XAOCEN.ReWiFi;
 
 public static class AppLogger
 {
+    private const long MaxLogBytes = 1 * 1024 * 1024;
     private static readonly object Sync = new();
+    private static readonly Encoding Utf8NoBom = new UTF8Encoding(false);
     private static readonly string LogFilePath = Path.Combine(AppConfig.DirectoryPath, "runtime.log");
 
     public static string Version =>
@@ -41,13 +43,15 @@ public static class AppLogger
             lock (Sync)
             {
                 Directory.CreateDirectory(AppConfig.DirectoryPath);
-                if (File.Exists(LogFilePath) && new FileInfo(LogFilePath).Length > 4 * 1024 * 1024)
+                var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff zzz} [{level}] [PID {Environment.ProcessId}] {message}{Environment.NewLine}";
+                var currentBytes = File.Exists(LogFilePath) ? new FileInfo(LogFilePath).Length : 0;
+                var lineBytes = Utf8NoBom.GetByteCount(line);
+                if (currentBytes >= MaxLogBytes || currentBytes > 0 && currentBytes + lineBytes > MaxLogBytes)
                 {
-                    File.WriteAllText(LogFilePath, $"{DateTimeOffset.Now:O} [INFO] 日志超过 4 MB，已重新开始。{Environment.NewLine}", Encoding.UTF8);
+                    File.WriteAllText(LogFilePath, $"{DateTimeOffset.Now:O} [INFO] 日志达到 1 MB，已重新开始。{Environment.NewLine}", Utf8NoBom);
                 }
 
-                var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff zzz} [{level}] [PID {Environment.ProcessId}] {message}{Environment.NewLine}";
-                File.AppendAllText(LogFilePath, line, new UTF8Encoding(false));
+                File.AppendAllText(LogFilePath, line, Utf8NoBom);
             }
         }
         catch

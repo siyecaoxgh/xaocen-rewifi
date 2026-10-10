@@ -23,7 +23,7 @@ internal static class TelemetryBuild
 #endif
 
     public const string SchemaVersion = "1.0";
-    public const string PolicyVersion = "2026-09-13";
+    public const string PolicyVersion = "2026-10-10";
 }
 
 internal static class TelemetryEventNames

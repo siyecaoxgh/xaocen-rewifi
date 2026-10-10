@@ -11,6 +11,7 @@ public sealed class SettingsForm : Form
     private readonly NumericUpDown _cooldown = new();
     private readonly CheckBox _autoRecovery = new();
     private readonly CheckBox _autoStart = new();
+    private readonly CheckBox _followLastWifi = new();
     private readonly AppConfig _initialConfig;
     private readonly WifiController _wifiController;
     private readonly AccountSessionManager _accountSessionManager;
@@ -63,7 +64,7 @@ public sealed class SettingsForm : Form
         };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 196));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 184));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 218));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 92));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
@@ -127,7 +128,7 @@ public sealed class SettingsForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 4,
-            RowCount = 4,
+            RowCount = 5,
             Margin = new Padding(0)
         };
         settings.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
@@ -137,6 +138,7 @@ public sealed class SettingsForm : Form
         settings.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
         settings.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
         settings.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        settings.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
         settings.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
 
         settings.Controls.Add(new Label { Text = "目标 Wi-Fi：", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 0);
@@ -161,13 +163,20 @@ public sealed class SettingsForm : Form
         settings.Controls.Add(new Label { Text = "恢复冷却：", AutoSize = true, Anchor = AnchorStyles.Left }, 2, 2);
         settings.Controls.Add(CreateValuePanel(_cooldown, "秒"), 3, 2);
 
+        _followLastWifi.Text = "自动跟随上次连接的 Wi-Fi（推荐）";
+        _followLastWifi.Checked = _initialConfig.FollowLastWifi;
+        _followLastWifi.AutoSize = true;
+        _followLastWifi.Anchor = AnchorStyles.Left;
+        settings.Controls.Add(_followLastWifi, 0, 3);
+        settings.SetColumnSpan(_followLastWifi, 4);
+
         _autoRecovery.Text = "自动恢复";
         _autoRecovery.Checked = _initialConfig.AutoRecovery;
         _autoStart.Text = "开机启动";
         _autoStart.Checked = _initialConfig.AutoStart;
-        settings.Controls.Add(_autoRecovery, 0, 3);
+        settings.Controls.Add(_autoRecovery, 0, 4);
         settings.SetColumnSpan(_autoRecovery, 2);
-        settings.Controls.Add(_autoStart, 2, 3);
+        settings.Controls.Add(_autoStart, 2, 4);
         settings.SetColumnSpan(_autoStart, 2);
 
         settingsGroup.Controls.Add(settings);
@@ -430,6 +439,12 @@ public sealed class SettingsForm : Form
         var config = _initialConfig.Clone();
         config.TargetSsid = _ssidTextBox.Text.Trim();
         config.AdapterName = _adapterTextBox.Text.Trim();
+        config.FollowLastWifi = _followLastWifi.Checked;
+        if (config.FollowLastWifi)
+        {
+            config.LastConnectedSsid = config.TargetSsid;
+            config.LastConnectedAdapterName = config.AdapterName;
+        }
         config.FailureDelaySeconds = (int)_failureDelay.Value;
         config.CooldownSeconds = (int)_cooldown.Value;
         config.AutoRecovery = _autoRecovery.Checked;

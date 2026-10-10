@@ -99,9 +99,12 @@ public sealed class TrayManager : IDisposable
 
     public void ApplyConfig(AppConfig config)
     {
-        _config = config.Clone();
-        _autoRecoveryItem.Checked = _config.AutoRecovery;
-        _autoStartItem.Checked = _config.AutoStart;
+        RunOnUi(() =>
+        {
+            _config = config.Clone();
+            _autoRecoveryItem.Checked = _config.AutoRecovery;
+            _autoStartItem.Checked = _config.AutoStart;
+        });
     }
 
     public void SetStatus(WatcherStatus status, string text)

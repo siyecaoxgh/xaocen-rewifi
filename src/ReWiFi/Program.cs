@@ -55,19 +55,20 @@ internal static class Program
     {
         AppLogger.StartSession();
         var config = AppConfig.Load();
-        AppLogger.Info($"配置：SSID={config.TargetSsid}; 网卡={config.AdapterName}; 异常等待={config.FailureDelaySeconds}s; 冷却={config.CooldownSeconds}s; 自动恢复={config.AutoRecovery}; 开机启动={config.AutoStart}; 连通性探测={config.EnableConnectivityProbe}; 探测超时={config.ConnectivityProbeTimeoutSeconds}s");
+        AppLogger.Info($"配置：SSID={config.TargetSsid}; 跟随上次 Wi-Fi={config.FollowLastWifi}; 网卡={config.AdapterName}; 异常等待={config.FailureDelaySeconds}s; 冷却={config.CooldownSeconds}s; 自动恢复={config.AutoRecovery}; 开机启动={config.AutoStart}; 连通性探测={config.EnableConnectivityProbe}; 探测超时={config.ConnectivityProbeTimeoutSeconds}s");
         var telemetry = new TelemetryClient();
-        if (config.LegalNoticeVersion != "2026-09-13")
+        if (config.LegalNoticeVersion != "2026-10-10")
         {
             using var welcome = new WelcomeForm(telemetry.Consent.AllUploadsDisabled);
             if (welcome.ShowDialog() != DialogResult.OK) { telemetry.Dispose(); return; }
             var consent = telemetry.Consent;
             telemetry.SetConsent(consent.Analytics, consent.Crash, welcome.DisableStatistics);
-            config.LegalNoticeVersion = "2026-09-13";
+            config.LegalNoticeVersion = "2026-10-10";
             SaveConfigBestEffort(config, "保存首次使用说明状态");
         }
         telemetry.InstallGlobalExceptionHandlers();
         telemetry.AddSensitiveValue(config.TargetSsid);
+        telemetry.AddSensitiveValue(config.LastConnectedSsid);
         telemetry.AddSensitiveValue(config.AdapterName);
         telemetry.InitializeSession();
         var startupManager = new StartupManager();
@@ -84,6 +85,13 @@ internal static class Program
         var accountSessionManager = new AccountSessionManager(accountClient, devicePublicKeyProvider: deviceIdentity.GetOrCreatePublicKey);
         var watcher = new NetworkWatcher(config, controller, new ConnectivityProbe());
         var tray = new TrayManager(config);
+        watcher.ConfigurationChanged += updatedConfig =>
+        {
+            config = updatedConfig;
+            telemetry.AddSensitiveValue(updatedConfig.TargetSsid);
+            telemetry.AddSensitiveValue(updatedConfig.LastConnectedSsid);
+            tray.ApplyConfig(updatedConfig);
+        };
         using var instanceCoordinator = new SingleInstanceCoordinator();
         SettingsForm? settingsForm = null;
         AuthorizationForm? authorizationForm = null;

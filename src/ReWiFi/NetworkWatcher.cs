@@ -38,6 +38,7 @@ public sealed class NetworkWatcher : IAsyncDisposable
 
     public event Action<WatcherStatus, string>? StatusChanged;
     public event Action<string>? NotificationRequested;
+    public event Action<AppConfig>? ConfigurationChanged;
 
     public void Start()
     {
@@ -58,7 +59,7 @@ public sealed class NetworkWatcher : IAsyncDisposable
             _config = config.Clone();
         }
 
-        AppLogger.Info($"配置已更新：SSID={config.TargetSsid}; 网卡={config.AdapterName}; 异常等待={config.FailureDelaySeconds}s; 冷却={config.CooldownSeconds}s; 自动恢复={config.AutoRecovery}; 开机启动={config.AutoStart}; 连通性探测={config.EnableConnectivityProbe}; 探测超时={config.ConnectivityProbeTimeoutSeconds}s");
+        AppLogger.Info($"配置已更新：SSID={config.TargetSsid}; 跟随上次 Wi-Fi={config.FollowLastWifi}; 网卡={config.AdapterName}; 异常等待={config.FailureDelaySeconds}s; 冷却={config.CooldownSeconds}s; 自动恢复={config.AutoRecovery}; 开机启动={config.AutoStart}; 连通性探测={config.EnableConnectivityProbe}; 探测超时={config.ConnectivityProbeTimeoutSeconds}s");
         SignalNetworkChange();
     }
 
@@ -121,7 +122,12 @@ public sealed class NetworkWatcher : IAsyncDisposable
         }
 
         var config = GetConfig();
-        var snapshot = NetworkSnapshot.Read(config.AdapterName, config.TargetSsid);
+        var snapshot = NetworkSnapshot.Read(config.AdapterName, config.TargetSsid, config.FollowLastWifi);
+        if (config.FollowLastWifi && snapshot.IsWifiConnected && !string.IsNullOrWhiteSpace(snapshot.CurrentSsid))
+        {
+            config = RememberCurrentWifi(config, snapshot.CurrentSsid);
+            snapshot = NetworkSnapshot.Read(config.AdapterName, config.TargetSsid, config.FollowLastWifi);
+        }
         if (snapshot.IsHealthy)
         {
             _failureStarted = null;
@@ -153,7 +159,12 @@ public sealed class NetworkWatcher : IAsyncDisposable
         }
 
         // Confirm once more after the delay before touching the adapter.
-        var confirmedSnapshot = NetworkSnapshot.Read(config.AdapterName, config.TargetSsid);
+        var confirmedSnapshot = NetworkSnapshot.Read(config.AdapterName, config.TargetSsid, config.FollowLastWifi);
+        if (config.FollowLastWifi && confirmedSnapshot.IsWifiConnected && !string.IsNullOrWhiteSpace(confirmedSnapshot.CurrentSsid))
+        {
+            config = RememberCurrentWifi(config, confirmedSnapshot.CurrentSsid);
+            confirmedSnapshot = NetworkSnapshot.Read(config.AdapterName, config.TargetSsid, config.FollowLastWifi);
+        }
         if (!confirmedSnapshot.IsHealthy)
         {
             if (!confirmedSnapshot.IsAdapterPresent ||
@@ -267,6 +278,46 @@ public sealed class NetworkWatcher : IAsyncDisposable
         }
     }
 
+    private AppConfig RememberCurrentWifi(AppConfig config, string currentSsid)
+    {
+        if (string.Equals(config.LastConnectedSsid, currentSsid, StringComparison.Ordinal) &&
+            string.Equals(config.TargetSsid, currentSsid, StringComparison.Ordinal) &&
+            string.Equals(config.LastConnectedAdapterName, config.AdapterName, StringComparison.OrdinalIgnoreCase))
+        {
+            return config;
+        }
+
+        var updated = config.Clone();
+        updated.TargetSsid = currentSsid;
+        updated.LastConnectedSsid = currentSsid;
+        updated.LastConnectedAdapterName = updated.AdapterName;
+
+        try
+        {
+            AppConfig.Save(updated);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warning($"保存最近连接的 Wi-Fi 失败，将继续使用本次运行记录：{ex.Message}");
+        }
+
+        lock (_sync)
+        {
+            _config = updated.Clone();
+        }
+
+        AppLogger.Info($"已跟随当前 Wi-Fi：SSID={updated.TargetSsid}; 网卡={updated.AdapterName}");
+        try
+        {
+            ConfigurationChanged?.Invoke(updated.Clone());
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warning($"通知界面更新最近连接的 Wi-Fi 失败：{ex.Message}");
+        }
+        return updated;
+    }
+
     private AppConfig GetConfig()
     {
         lock (_sync) { return _config.Clone(); }
@@ -322,7 +373,7 @@ internal readonly record struct NetworkSnapshot(
     bool IsInternetAvailable,
     string? CurrentSsid)
 {
-    public static NetworkSnapshot Read(string adapterName, string targetSsid)
+    public static NetworkSnapshot Read(string adapterName, string targetSsid, bool followCurrentWifi = false)
     {
         var adapter = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(x =>
             string.Equals(x.Name, adapterName, StringComparison.OrdinalIgnoreCase) ||
@@ -345,7 +396,8 @@ internal readonly record struct NetworkSnapshot(
         var wifiConnected = wlanConnection?.IsConnected ?? adapterUp;
         var currentSsid = wlanConnection?.Ssid;
         var targetWifiConnected = wifiConnected &&
-                                  (wlanConnection is null ||
+                                  (followCurrentWifi ||
+                                   wlanConnection is null ||
                                    string.Equals(currentSsid, targetSsid, StringComparison.Ordinal));
         var internetAvailable = NetworkListManagerReader.TryGetInternetAvailability();
         internetAvailable ??= WindowsAdapterConnectivityReader.IsInternetAvailable(adapter.Name);

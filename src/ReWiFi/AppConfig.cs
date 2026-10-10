@@ -7,6 +7,9 @@ public sealed class AppConfig
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public string TargetSsid { get; set; } = "XIAOCEN_HOME";
+    public bool FollowLastWifi { get; set; } = true;
+    public string? LastConnectedSsid { get; set; }
+    public string? LastConnectedAdapterName { get; set; }
     public string AdapterName { get; set; } = "Wi-Fi";
     public int FailureDelaySeconds { get; set; } = 5;
     public int CooldownSeconds { get; set; } = 30;
@@ -85,6 +88,9 @@ public sealed class AppConfig
     public AppConfig Clone() => new()
     {
         TargetSsid = TargetSsid,
+        FollowLastWifi = FollowLastWifi,
+        LastConnectedSsid = LastConnectedSsid,
+        LastConnectedAdapterName = LastConnectedAdapterName,
         AdapterName = AdapterName,
         FailureDelaySeconds = FailureDelaySeconds,
         CooldownSeconds = CooldownSeconds,
@@ -99,7 +105,13 @@ public sealed class AppConfig
     private void Normalize()
     {
         TargetSsid = (TargetSsid ?? string.Empty).Trim();
+        LastConnectedSsid = string.IsNullOrWhiteSpace(LastConnectedSsid) ? null : LastConnectedSsid.Trim();
+        LastConnectedAdapterName = string.IsNullOrWhiteSpace(LastConnectedAdapterName) ? null : LastConnectedAdapterName.Trim();
         AdapterName = (AdapterName ?? string.Empty).Trim();
+        if (FollowLastWifi && string.IsNullOrWhiteSpace(LastConnectedSsid))
+        {
+            LastConnectedSsid = TargetSsid;
+        }
         FailureDelaySeconds = Math.Clamp(FailureDelaySeconds, 1, 3600);
         CooldownSeconds = Math.Clamp(CooldownSeconds, 1, 86400);
         ConnectivityProbeTimeoutSeconds = Math.Clamp(ConnectivityProbeTimeoutSeconds, 1, 15);
